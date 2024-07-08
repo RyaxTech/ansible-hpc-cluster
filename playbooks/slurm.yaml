@@ -1,0 +1,280 @@
+---
+# ONLY ON SLURMCTLD
+- name: Run slurmctld and scontrol on frontale node
+  hosts: slurmctld
+  become: yes
+  tasks:
+  - name: Install slurm needed dependencies
+    apt:
+      name:
+        - mariadb-server
+        - libmariadbd-dev
+  - name: Test for cycling on slurm node IPs
+    ansible.builtin.debug:
+      msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
+    loop: "{{ groups['slurmnodes'] }}"
+
+  # Create munge key, only if the file is not present
+  - name: Munge key
+    ansible.builtin.shell:
+      cmd: mungekey
+    creates: /etc/munge/munge.key
+    register: munge
+
+  # Need to implemente a foreach node in ansible, not yet know how to do it
+  - name: Copy "/etc/munge/munge.key" to /tmp
+    ansible.builtin.copy:
+      src: "/etc/munge/munge.key"
+      dest: /tmp
+      remote_src: yes
+      owner: root
+      group: root
+    when: munge.changed == True
+
+  # TODO check if jwt_hs256.key feature works
+  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
+    ansible.builtin.file:
+      path: /var/spool/slurm/
+      state: directory
+      owner: slurm
+      group: slurm
+      mode: 0755
+
+  - name: Creating jwt_hs256.key for slurmdb
+    ansible.builtin.shell:
+      cmd: dd if=/dev/random of=/var/spool/slurm/jwt_hs256.key bs=32 count=1
+    creates: /var/spool/slurm/jwt_hs256.key
+    register: jwths256
+
+  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
+    ansible.builtin.file:
+      path: /var/spool/slurm/jwt_hs256.key
+      state: file
+      owner: slurm
+      group: slurm
+      mode: 0600
+    when: jwths256.changed == True
+
+
+# ON ALL SLURM NODES
+- name: Restores slurm after reboot
+  hosts: allnodes
+  become: yes
+  vars:
+    slurm_version: 23-11-8-1
+    slurm_short_version: "23.11.8"
+  tasks:
+
+  - name: Ensure group slurm exists with correct gid 1001
+    ansible.builtin.group:
+      name: slurm
+      state: present
+      gid: 1001
+
+  - name: Creating user slurm with ID 1001
+    ansible.builtin.user:
+      name: slurm
+      create_home: false
+      uid: 1001
+      group: slurm
+      shell: /bin/bash
+
+  - name: Create /usr/local/etc/slurm directory
+    ansible.builtin.file:
+      path: /usr/local/etc/slurm
+      state: directory
+      owner: root
+      group: root
+
+  - name: Create /var/log/slurm directory
+    ansible.builtin.file:
+      path: /var/log/slurm
+      state: directory
+      owner: slurm
+      group: slurm
+      mode: 0755
+
+  - name: Create /var/spool/slurm directory
+    ansible.builtin.file:
+      path: /var/spool/slurm
+      state: directory
+      owner: slurm
+      group: slurm
+      mode: 0755
+
+  - name: Install slurm needed dependencies
+    apt:
+      name:
+        - libhwloc-dev
+        - hwloc
+        - autoconf
+        - automake
+        - libtool
+        - libevent-dev
+        - build-essential
+        - libmunge-dev
+        - munge
+        - curl
+        - libghc-jwt-dev
+        - libcjson-dev
+        - libhttp-parser-dev
+        - libjson-c-dev
+        - libjwt-dev
+        - libyaml-dev
+        - man2html
+        - libhttp-parser-dev
+        - libjson-c-dev
+        - libjwt-dev
+        - libyaml-dev
+        - libcurl4-openssl-dev
+        - libpmix-dev
+        - libdbus-1-dev
+        - libgtk2.0-dev
+        - tcl-dev
+      state: present
+
+  # Scp munge key, only if the file is not present
+  # TODO check if munge stuff works, not tested because it was manually done
+  - name: Munge key
+    ansible.builtin.shell:
+      cmd: scp -i /home/ubuntu/ubuntu.pem ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
+    creates: /etc/munge/munge.key
+
+  - name: Fix owner of /etc/munge/munge.key
+    ansible.builtin.file:
+      path: /etc/munge/munge.key
+      state: file
+      owner: munge
+      group: munge
+      mode: 0600
+
+  - name: Discover installed slurm version
+    ansible.builtin.shell:
+      cmd: slurmd --version | cut -d' ' -f2
+    register: slurm_discovered_version
+
+  - name: Discover installed slurm version
+    ansible.builtin.debug:
+      msg: "DETECTED SLURM VERSION ====>{{ slurm_discovered_version.stdout }}<===="
+
+  - name: Slurm version to install
+    ansible.builtin.debug:
+      msg: "SLURM VERSION TO INSTALL ====>{{ slurm_short_version }}<===="
+
+  - name: Download slurm
+    ansible.builtin.get_url:
+      url: "https://github.com/SchedMD/slurm/archive/refs/tags/slurm-{{ slurm_version }}.tar.gz"
+      dest: "/tmp/slurm-{{ slurm_version }}.tar.gz"
+    become_user: ubuntu
+    when: slurm_discovered_version.stdout != slurm_short_version
+
+  - name: Extract slurm targz file
+    when: slurm_discovered_version.stdout != slurm_short_version
+    become_user: ubuntu
+    ansible.builtin.unarchive:
+      remote_src: true
+      src: "/tmp/slurm-{{ slurm_version }}.tar.gz"
+      dest: "/tmp"
+
+  - name: Configure slurm
+    when: slurm_discovered_version.stdout != slurm_short_version
+    become_user: ubuntu
+    ansible.builtin.shell:
+      cmd: |
+        ./configure --with-pmix
+      chdir: "/tmp/slurm-slurm-{{ slurm_version }}"
+
+  - name: Make slurm
+    when: slurm_discovered_version.stdout != slurm_short_version
+    become_user: ubuntu
+    ansible.builtin.shell:
+      cmd: |
+        make
+      chdir: "/tmp/slurm-slurm-{{ slurm_version }}"
+
+  - name: Install slurm (make install)
+    when: slurm_discovered_version.stdout != slurm_short_version
+    ansible.builtin.shell:
+      cmd: |
+        make install
+      chdir: "/tmp/slurm-slurm-{{ slurm_version }}"
+
+  - name: Copy cgroup.conf to /usr/local/etc/
+    template:
+      src: cgroup.conf
+      dest: /usr/local/etc/cgroup.conf
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Copy slurm.conf to /usr/local/etc/
+    template:
+      src: slurm.conf.j2
+      dest: /usr/local/etc/slurm.conf
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Copy "/tmp/slurm-slurm-{{ slurm_version }}/slurmd.service" to /usr/lib/systemd/system/
+    ansible.builtin.copy:
+      src: "/tmp/slurm-slurm-{{ slurm_version }}/etc/slurmd.service"
+      dest: /usr/lib/systemd/system/
+      remote_src: yes
+      owner: root
+      group: root
+
+  - name: Ensure slurmd is running
+    service:
+      name: slurmd
+      state: restarted
+      enabled: yes
+
+# ONLY ON SLURMCTLD RESTART scontrol
+- name: Run slurmctld and scontrol on frontale node
+  hosts: slurmctld
+  become: yes
+  vars:
+    slurm_version: 23-11-8-1
+  tasks:
+
+  - name: Copy slurmdbd.conf to /usr/local/etc/
+    template:
+      src: slurmdbd.conf
+      dest: /usr/local/etc/slurmdbd.conf
+      owner: slurm
+      group: slurm
+      mode: 0600
+
+  - name: Copy "/tmp/slurm-slurm-{{ slurm_version }}/slurmctld.service" to /usr/lib/systemd/system/
+    ansible.builtin.copy:
+      src: "/tmp/slurm-slurm-{{ slurm_version }}/etc/slurmctld.service"
+      dest: /usr/lib/systemd/system/
+      remote_src: yes
+      owner: root
+      group: root
+
+  - name: Copy "/tmp/slurm-slurm-{{ slurm_version }}/slurmdbd.service" to /usr/lib/systemd/system/
+    ansible.builtin.copy:
+      src: "/tmp/slurm-slurm-{{ slurm_version }}/etc/slurmdbd.service"
+      dest: /usr/lib/systemd/system/
+      remote_src: yes
+      owner: root
+      group: root
+
+  - name: Ensure slurmdbd service is running
+    service:
+      name: slurmdbd
+      state: restarted
+      enabled: yes
+
+  - name: Ensure slurmctld service is running
+    service:
+      name: slurmctld
+      state: restarted
+      enabled: yes
+
+  # Need to implemente a foreach node in ansible, not yet know how to do it
+  - name: Change node states to idle
+    ansible.builtin.shell: scontrol update  NodeName=`hostname` state=Idle
+
+

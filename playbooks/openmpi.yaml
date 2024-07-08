@@ -1,0 +1,32 @@
+---
+# defaults file for ansible-singularity
+- hosts: icy5
+  become: yes
+  tasks:
+  - name: Remove current version of openmpi
+    apt:
+      name:
+        - openmpi-bin
+      state: absent
+      update_cache: yes
+
+  - name: Download libc6_2.38
+    get_url:
+      url: "http://ftp.fr.debian.org/debian/pool/main/g/glibc/libc6_2.38-11_amd64.deb"
+      dest: "/tmp"
+      mode: 0644
+
+  - name: Install libc6_2.38
+    ansible.builtin.apt:
+      deb: "/tmp/libc6_2.38-11_amd64.deb"
+
+  - name: Download openmpi 4.1.6-13
+    get_url:
+      url: "http://ftp.fr.debian.org/debian/pool/main/o/openmpi/openmpi-bin_4.1.6-13.3_amd64.deb"
+      dest: "/tmp"
+      mode: 0644
+
+  - name: Install openmpi .deb
+    ansible.builtin.apt:
+      deb: "/tmp/openmpi-bin_4.1.6-13.3_amd64.deb"
+

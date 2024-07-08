@@ -1,0 +1,62 @@
+---
+- name: Creating user withtout home directory on clients
+  hosts: nfsclients
+  become: yes
+  tasks:
+    - name: Ensure group {{ username }} exists with correct gid
+      ansible.builtin.group:
+        name: "{{ username }}"
+        state: present
+        gid: "{{ userid }}"
+    - name: Creating user {{ username }} with ID {{ userid }}
+      ansible.builtin.user:
+        name: "{{ username }}"
+        create_home: false
+        uid: "{{ userid }}"
+        group: "{{ username }}"
+        shell: /bin/bash
+- name: Creating user WITH home directory
+  hosts: nfsserver
+  become: yes
+  tasks:
+    - name: Ensure group {{ username }} exists with correct gid
+      ansible.builtin.group:
+        name: "{{ username }}"
+        state: present
+        gid: "{{ userid }}"
+    - name: Creating user {{ username }}
+      ansible.builtin.user:
+        name: "{{ username }}"
+        create_home: true
+        uid: "{{ userid }}"
+        groups: "{{ username }}"
+        shell: /bin/bash
+        generate_ssh_key: true
+    - name: Copying .bashrc to /home/{{ username }}
+      template:
+        src: .bashrc
+        dest: "/home/{{ username }}"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: 0644
+    - name: Copying .profile to /home/{{ username }}
+      template:
+        src: .profile
+        dest: "/home/{{ username }}"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: 0644
+    - name: Copying authorized_keys to /home/{{ username }}
+      template:
+        src: authorized_keys
+        dest: "/home/{{ username }}/.ssh/authorized_keys"
+        owner: "{{ username }}"
+        group: "{{ username }}"
+        mode: 0644
+    - name: Recursively change ownership to {{ username }}
+      file:
+        path: "/home/{{ username }}"
+        state: directory
+        recurse: yes
+        owner: "{{ username }}"
+        group: "{{ username }}"

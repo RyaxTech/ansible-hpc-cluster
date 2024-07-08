@@ -1,0 +1,84 @@
+---
+# defaults file for ansible-singularity
+- hosts: allnodes
+  vars:
+    singularity_version: "3.10.0"
+    singularity_go_path: "/opt/go"
+    go_version: "go1.21.4.linux-amd64"
+  become: yes
+  tasks:
+  - name: Ubuntu package dependencies for singularity/go
+    apt:
+      name:
+        - build-essential
+        - libglib2.0-dev
+        - libssl-dev
+        - uuid-dev
+        - libgpgme-dev
+        - squashfs-tools
+        - libseccomp-dev
+        - wget
+        - pkg-config
+      state: latest
+      update_cache: yes
+
+  - name: Download GO
+    get_url:
+      url: "https://go.dev/dl/{{go_version}}.tar.gz"
+      dest: "/tmp"
+      mode: 0644
+
+  - name: Delete content and directory
+    ansible.builtin.file:
+      state: absent
+      path: "{{ singularity_go_path }}"
+
+  - name: Create the "{{singularity_go_path}}" directory
+    file:
+      path: "{{singularity_go_path}}"
+      state: directory
+      mode: 0755
+
+  - name: Untar GO archive
+    unarchive:
+      src: "/tmp/{{go_version}}.tar.gz"
+      dest: "{{singularity_go_path}}"
+      extra_opts: [--strip-components=1]
+      remote_src: yes
+
+  - name: Download the singularity release
+    get_url:
+      url: "https://github.com/sylabs/singularity/releases/download/v{{singularity_version}}/singularity-ce-{{singularity_version}}.tar.gz"
+      dest: "/tmp/singularity-{{singularity_version}}.tar.gz"
+      mode: 0644
+
+  - name: Create the "/opt/singularity-{{singularity_version}}" directory
+    file:
+      path: "/opt/singularity-{{singularity_version}}"
+      state: directory
+      mode: 0755
+
+  - name: Untar the singularity archive
+    unarchive:
+      src: "/tmp/singularity-{{singularity_version}}.tar.gz"
+      dest: "/opt/singularity-{{singularity_version}}"
+      extra_opts: [--strip-components=1]
+      remote_src: yes
+
+  - name: Execute mconfig for v3.0 or newer
+    shell: ./mconfig chdir="/opt/singularity-{{singularity_version}}"
+    environment:
+      GOPATH: "{{singularity_go_path}}"
+      PATH: "{{ansible_env.PATH}}:{{singularity_go_path}}/bin"
+
+  - name: Execute make build for v3.0 or newer
+    shell: make -C builddir chdir="/opt/singularity-{{singularity_version}}"
+    environment:
+      GOPATH: "{{singularity_go_path}}"
+      PATH: "{{ansible_env.PATH}}:{{singularity_go_path}}/bin"
+
+  - name: Execute make install for v3.0 or newer
+    shell: make -C builddir install chdir="/opt/singularity-{{singularity_version}}"
+    environment:
+      GOPATH: "{{singularity_go_path}}"
+      PATH: "{{ansible_env.PATH}}:{{singularity_go_path}}/bin"

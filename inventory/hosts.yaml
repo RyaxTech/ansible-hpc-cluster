@@ -1,0 +1,27 @@
+slurmnodes:
+  hosts:
+    test2:
+      ansible_host: 111.111.111.111   
+      ansible_user: ubuntu
+    test3:
+      ansible_host: 111.111.111.111
+      ansible_user: ubuntu
+
+slurmctld:
+  hosts:
+    test1:
+      ansible_host: 111.111.111.111
+      ansible_user: ubuntu
+
+nfsclients:
+  children:
+    slurmnodes
+
+nfsserver:
+  children:
+    slurmctld:
+
+allnodes:
+  children:
+    slurmctld:
+    slurmnodes:

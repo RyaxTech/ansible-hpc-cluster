@@ -1,0 +1,66 @@
+---
+- name: Install the nfsserver
+  hosts: nfsserver
+  become: yes
+  tasks:
+    - name: install nfs-utils
+      apt:
+        name:
+          - nfs-common
+          - nfs-kernel-server
+        state: present
+    - name: Create a mountable directory if it does not exist
+      file:
+        path: /home
+        state: directory
+        owner: root
+        group: root
+        mode: '0775'
+    - name: Copy exports file.
+      template:
+        src: exports.j2
+        dest: /etc/exports
+        owner: root
+        group: root
+        mode: 0666
+    - name: Ensure nfs is running
+      service:
+        name: nfs-kernel-server
+        state: restarted
+        enabled: yes
+- hosts: nfsclients
+  become: yes
+  tasks:
+    - apt:
+        name:
+          - nfs-common
+    - name: Create a mountable directory if it does not exist
+      file:
+        path: /home
+        state: directory
+        owner: root
+        group: root
+        mode: '0775'
+
+    - name: Ensure rpcbind is running (Debian)
+      action: service name=rpcbind state=started enabled=yes
+
+    - name: Ensure portmap is running (Ubuntu prior to Trusty Thar)
+      action: service name=portmap state=started enabled=yes
+
+    - name: Ensure /home directory exists
+      action: file path=/home state=directory
+      tags:
+        - nfs
+
+    - debug:
+        msg: "{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/home"
+
+    - name: Mount NFS {{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}/home on /home
+      mount:
+        src: "{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/home"
+        path: /home
+        state: mounted
+        opts: rw,sync,hard
+        boot: true
+        fstype: nfs
