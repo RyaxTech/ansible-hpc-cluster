@@ -14,7 +14,7 @@ before starting.
 * create private key pairs for the user to launch the playbooks (the user needs to have sudo rights)
 * insert your public keys into `playbooks/template/authorized_keys`
 * change the IPs and hostnames in `inventory/hosts.yaml` to reflect your cluster
-* change the slurm node names and their hardware characteristics in `playbooks/templates/slurm.conf.j2` to reflect your cluster
+* change the slurm node names hardware characteristics in `playbooks/templates/slurm.conf.j2` to reflect your cluster
 * you may change the slurm version in playbook/slurm.yaml
 * Follow detailed instructions below regarding the playbooks you need to install
 

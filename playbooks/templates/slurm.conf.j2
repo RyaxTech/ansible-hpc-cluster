@@ -163,6 +163,8 @@ SlurmdLogFile=/var/log/slurm/slurmd.log
 #
 #
 # COMPUTE NODES
-NodeName=clusterhpc-nodes[1-3] Procs=2 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=3500 State=UNKNOWN
+{% for item in groups['allnodes']  %}
+NodeName={{ item }} Procs=2 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=3500 State=UNKNOWN
+{% endfor %}
 
 PartitionName=debug Nodes=ALL Default=YES MaxTime=INFINITE State=UP

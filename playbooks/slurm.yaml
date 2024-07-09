@@ -9,6 +9,11 @@
       name:
         - mariadb-server
         - libmariadbd-dev
+  - name: Start mariadb service
+    service:
+      name: mariadb
+      state: started
+      enabled: yes
 
 # ON ALL NODES
 - name: Preparation for slurm installation
@@ -16,7 +21,7 @@
   become: yes
   vars:
     slurm_version: 23-11-8-1
-    slurm_short_version: "23.11.8.x"
+    slurm_short_version: "23.11.8"
   tasks:
 
   - name: Ensure group slurm exists with correct gid 1001
