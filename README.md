@@ -14,6 +14,7 @@ before starting.
 * create private key pairs for the user to launch the playbooks (the user needs to have sudo rights)
 * insert your public keys into `playbooks/template/authorized_keys`
 * change the IPs and hostnames in `inventory/hosts.yaml` to reflect your cluster
+* change the slurm node names and their hardware characteristics in `playbooks/templates/slurm.conf.j2` to reflect your cluster
 * you may change the slurm version in playbook/slurm.yaml
 * Follow detailed instructions below regarding the playbooks you need to install
 
@@ -22,7 +23,7 @@ before starting.
 Install NFS.
 
 ```sh
- ansible-playbook --private-key=../ubuntu.pem playbooks/nfs.yaml
+ ansible-playbook ./playbooks/nfs.yaml
 ```
 
 ## Create new user
@@ -31,23 +32,23 @@ Create a new user, will create username with same userid accross all
 nfsclient nodes, then it creates the user home only on the nfs server.
 
 ```sh
-ansible-playbook --private-key=../ubuntu.pem --extra-vars "username=ryax userid=1044" ./playbooks/add-user.yaml
+ansible-playbook --extra-vars "username=ryax userid=1044" ./playbooks/add-user.yaml
 ```
 
 # Install slurm
 
 ```sh
-ansible-playbook --private-key=../ubuntu.pem ./playbooks/slurm.yaml
+ansible-playbook ./playbooks/slurm.yaml
 ```
 
 # Install singularity
 
 ```sh
-ansible-playbook --private-key=../ubuntu.pem ./playbooks/singularity.yaml
+ansible-playbook ./playbooks/singularity.yaml
 ```
 
 # Install openmpi
 
 ```sh
-ansible-playbook --private-key=../ubuntu.pem ./playbooks/openmpi.yaml
+ansible-playbook ./playbooks/openmpi.yaml
 ```

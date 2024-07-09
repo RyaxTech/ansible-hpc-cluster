@@ -1,11 +1,22 @@
 ---
+# ONLY ON SLURMCTLD
+- name: Prepare slurmdbd installation
+  hosts: slurmctld
+  become: yes
+  tasks:
+  - name: Install slurm mariadb needed dependencies
+    apt:
+      name:
+        - mariadb-server
+        - libmariadbd-dev
+
 # ON ALL NODES
 - name: Preparation for slurm installation
   hosts: allnodes
   become: yes
   vars:
     slurm_version: 23-11-8-1
-    slurm_short_version: "23.11.8"
+    slurm_short_version: "23.11.8.x"
   tasks:
 
   - name: Ensure group slurm exists with correct gid 1001
@@ -183,11 +194,6 @@
   hosts: slurmctld
   become: yes
   tasks:
-  - name: Install slurm needed dependencies
-    apt:
-      name:
-        - mariadb-server
-        - libmariadbd-dev
   - name: Test for cycling on slurm node IPs
     ansible.builtin.debug:
       msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
