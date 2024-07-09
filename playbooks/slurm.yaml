@@ -30,7 +30,6 @@
       remote_src: yes
       owner: root
       group: root
-    when: munge.changed == True
 
 
 # ON ALL NODES
@@ -185,11 +184,6 @@
       owner: root
       group: root
 
-  - name: Ensure slurmd is running
-    service:
-      name: slurmd
-      state: restarted
-      enabled: yes
 
 # ONLY ON SLURM NODES
 - name: Copy munge key and jwt to slurm nodes
@@ -212,6 +206,12 @@
       group: munge
       mode: 0600
 
+  - name: Ensure slurmd is running
+    service:
+      name: slurmd
+      state: restarted
+      enabled: yes
+
 # ONLY ON SLURMCTLD
 - name: Run slurmctld and scontrol on frontale node
   hosts: slurmctld
@@ -222,6 +222,11 @@
       msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
     loop: "{{ groups['slurmnodes'] }}"
 
+  - name: Ensure slurmd is running
+    service:
+      name: slurmd
+      state: restarted
+      enabled: yes
 
   # TODO check if jwt_hs256.key feature works
   - name: Fix owner of /var/spool/slurm/jwt_hs256.key
@@ -245,9 +250,6 @@
       owner: slurm
       group: slurm
       mode: 0600
-    when: jwths256.changed == True
-
-
 
 # ONLY ON SLURMCTLD RESTART scontrol
 - name: Run slurmctld and scontrol on frontale node
