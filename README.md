@@ -11,11 +11,11 @@ before starting.
 
 ## Configuration
 
-* create private key pairs (1 per user, at least 1 for root)
-* insert your public keys into `ansible/playbooks/template/authorized_keys`
-* change the IPs and hostnames in `ansible/inventory/hosts.yaml` to reflect your cluster
+* create private key pairs for the user to launch the playbooks (the user needs to have sudo rights)
+* insert your public keys into `playbooks/template/authorized_keys`
+* change the IPs and hostnames in `inventory/hosts.yaml` to reflect your cluster
 * you may change the slurm version in playbook/slurm.yaml
-* Follow detailed instructions below
+* Follow detailed instructions below regarding the playbooks you need to install
 
 ## Install NFS
 
