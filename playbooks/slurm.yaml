@@ -1,63 +1,6 @@
 ---
-# ONLY ON SLURMCTLD
-- name: Run slurmctld and scontrol on frontale node
-  hosts: slurmctld
-  become: yes
-  tasks:
-  - name: Install slurm needed dependencies
-    apt:
-      name:
-        - mariadb-server
-        - libmariadbd-dev
-  - name: Test for cycling on slurm node IPs
-    ansible.builtin.debug:
-      msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
-    loop: "{{ groups['slurmnodes'] }}"
-
-  # Create munge key, only if the file is not present
-  - name: Munge key
-    ansible.builtin.shell:
-      cmd: mungekey
-    creates: /etc/munge/munge.key
-    register: munge
-
-  # Need to implemente a foreach node in ansible, not yet know how to do it
-  - name: Copy "/etc/munge/munge.key" to /tmp
-    ansible.builtin.copy:
-      src: "/etc/munge/munge.key"
-      dest: /tmp
-      remote_src: yes
-      owner: root
-      group: root
-    when: munge.changed == True
-
-  # TODO check if jwt_hs256.key feature works
-  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
-    ansible.builtin.file:
-      path: /var/spool/slurm/
-      state: directory
-      owner: slurm
-      group: slurm
-      mode: 0755
-
-  - name: Creating jwt_hs256.key for slurmdb
-    ansible.builtin.shell:
-      cmd: dd if=/dev/random of=/var/spool/slurm/jwt_hs256.key bs=32 count=1
-    creates: /var/spool/slurm/jwt_hs256.key
-    register: jwths256
-
-  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
-    ansible.builtin.file:
-      path: /var/spool/slurm/jwt_hs256.key
-      state: file
-      owner: slurm
-      group: slurm
-      mode: 0600
-    when: jwths256.changed == True
-
-
-# ON ALL SLURM NODES
-- name: Restores slurm after reboot
+# ON ALL NODES
+- name: Preparation for slurm installation
   hosts: allnodes
   become: yes
   vars:
@@ -132,21 +75,6 @@
         - libgtk2.0-dev
         - tcl-dev
       state: present
-
-  # Scp munge key, only if the file is not present
-  # TODO check if munge stuff works, not tested because it was manually done
-  - name: Munge key
-    ansible.builtin.shell:
-      cmd: scp -i /home/ubuntu/ubuntu.pem ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
-    creates: /etc/munge/munge.key
-
-  - name: Fix owner of /etc/munge/munge.key
-    ansible.builtin.file:
-      path: /etc/munge/munge.key
-      state: file
-      owner: munge
-      group: munge
-      mode: 0600
 
   - name: Discover installed slurm version
     ansible.builtin.shell:
@@ -228,6 +156,85 @@
       name: slurmd
       state: restarted
       enabled: yes
+
+# ONLY ON SLURM NODES
+- name: Copy munge key and jwt to slurm nodes
+  hosts: slurmnodes
+  become: yes
+  tasks:
+
+  # Scp munge key, only if the file is not present
+  # TODO check if munge stuff works, not tested because it was manually done
+  - name: Munge key
+    ansible.builtin.shell:
+      cmd: scp -i /home/ubuntu/ubuntu.pem ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
+    creates: /etc/munge/munge.key
+
+  - name: Fix owner of /etc/munge/munge.key
+    ansible.builtin.file:
+      path: /etc/munge/munge.key
+      state: file
+      owner: munge
+      group: munge
+      mode: 0600
+
+# ONLY ON SLURMCTLD
+- name: Run slurmctld and scontrol on frontale node
+  hosts: slurmctld
+  become: yes
+  tasks:
+  - name: Install slurm needed dependencies
+    apt:
+      name:
+        - mariadb-server
+        - libmariadbd-dev
+  - name: Test for cycling on slurm node IPs
+    ansible.builtin.debug:
+      msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
+    loop: "{{ groups['slurmnodes'] }}"
+
+  # Create munge key, only if the file is not present
+  - name: Munge key
+    ansible.builtin.shell:
+      cmd: mungekey
+    creates: /etc/munge/munge.key
+    register: munge
+
+  # Need to implemente a foreach node in ansible, not yet know how to do it
+  - name: Copy "/etc/munge/munge.key" to /tmp
+    ansible.builtin.copy:
+      src: "/etc/munge/munge.key"
+      dest: /tmp
+      remote_src: yes
+      owner: root
+      group: root
+    when: munge.changed == True
+
+  # TODO check if jwt_hs256.key feature works
+  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
+    ansible.builtin.file:
+      path: /var/spool/slurm/
+      state: directory
+      owner: slurm
+      group: slurm
+      mode: 0755
+
+  - name: Creating jwt_hs256.key for slurmdb
+    ansible.builtin.shell:
+      cmd: dd if=/dev/random of=/var/spool/slurm/jwt_hs256.key bs=32 count=1
+    creates: /var/spool/slurm/jwt_hs256.key
+    register: jwths256
+
+  - name: Fix owner of /var/spool/slurm/jwt_hs256.key
+    ansible.builtin.file:
+      path: /var/spool/slurm/jwt_hs256.key
+      state: file
+      owner: slurm
+      group: slurm
+      mode: 0600
+    when: jwths256.changed == True
+
+
 
 # ONLY ON SLURMCTLD RESTART scontrol
 - name: Run slurmctld and scontrol on frontale node
