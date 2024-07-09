@@ -167,8 +167,8 @@
   # TODO check if munge stuff works, not tested because it was manually done
   - name: Munge key
     ansible.builtin.shell:
-      cmd: scp -i /home/ubuntu/ubuntu.pem ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
-    creates: /etc/munge/munge.key
+      cmd: scp ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
+      creates: /etc/munge/munge.key
 
   - name: Fix owner of /etc/munge/munge.key
     ansible.builtin.file:
@@ -197,7 +197,7 @@
   - name: Munge key
     ansible.builtin.shell:
       cmd: mungekey
-    creates: /etc/munge/munge.key
+      creates: /etc/munge/munge.key
     register: munge
 
   # Need to implemente a foreach node in ansible, not yet know how to do it
@@ -222,7 +222,7 @@
   - name: Creating jwt_hs256.key for slurmdb
     ansible.builtin.shell:
       cmd: dd if=/dev/random of=/var/spool/slurm/jwt_hs256.key bs=32 count=1
-    creates: /var/spool/slurm/jwt_hs256.key
+      creates: /var/spool/slurm/jwt_hs256.key
     register: jwths256
 
   - name: Fix owner of /var/spool/slurm/jwt_hs256.key
