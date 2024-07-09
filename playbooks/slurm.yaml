@@ -15,10 +15,10 @@
       state: started
       enabled: yes
   - name: Create database user with name 'slurm' with all database privileges
-  community.mysql.mysql_user:
-    name: slurm
-    priv: '.:ALL'
-    state: present
+    community.mysql.mysql_user:
+      name: slurm
+      priv: '.:ALL'
+      state: present
 
 # ON ALL NODES
 - name: Preparation for slurm installation
