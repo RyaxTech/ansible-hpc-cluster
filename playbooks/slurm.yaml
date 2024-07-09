@@ -9,11 +9,29 @@
       name:
         - mariadb-server
         - libmariadbd-dev
+        - libmunge-dev
+        - munge
   - name: Start mariadb service
     service:
       name: mariadb
       state: started
       enabled: yes
+    # Create munge key, only if the file is not present
+  - name: Munge key
+    ansible.builtin.shell:
+      cmd: mungekey
+      creates: /etc/munge/munge.key
+    register: munge
+
+  - name: Copy "/etc/munge/munge.key" to /tmp
+    ansible.builtin.copy:
+      src: "/etc/munge/munge.key"
+      dest: /tmp
+      remote_src: yes
+      owner: root
+      group: root
+    when: munge.changed == True
+
 
 # ON ALL NODES
 - name: Preparation for slurm installation
@@ -183,7 +201,7 @@
   # TODO check if munge stuff works, not tested because it was manually done
   - name: Munge key
     ansible.builtin.shell:
-      cmd: scp ubuntu@"{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}":/tmp/munge.key /etc/munge/munge.key
+      cmd: "scp ubuntu@{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/tmp/munge.key /etc/munge/munge.key"
       creates: /etc/munge/munge.key
 
   - name: Fix owner of /etc/munge/munge.key
@@ -204,22 +222,6 @@
       msg: "Cycling through nodes : ==> {{ item }} : {{ hostvars[item]['ansible_host'] }}"
     loop: "{{ groups['slurmnodes'] }}"
 
-  # Create munge key, only if the file is not present
-  - name: Munge key
-    ansible.builtin.shell:
-      cmd: mungekey
-      creates: /etc/munge/munge.key
-    register: munge
-
-  # Need to implemente a foreach node in ansible, not yet know how to do it
-  - name: Copy "/etc/munge/munge.key" to /tmp
-    ansible.builtin.copy:
-      src: "/etc/munge/munge.key"
-      dest: /tmp
-      remote_src: yes
-      owner: root
-      group: root
-    when: munge.changed == True
 
   # TODO check if jwt_hs256.key feature works
   - name: Fix owner of /var/spool/slurm/jwt_hs256.key
