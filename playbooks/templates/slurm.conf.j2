@@ -2,12 +2,12 @@
 # Put this file on all nodes of your cluster.
 # See the slurm.conf man page for more information.
 #
-ClusterName=meprecisa
+ClusterName=clusterhpc
 # SlurmctldAddr=152.228.213.253
 # SlurmctldHost=m-slurm-dev-001
 
-SlurmctldAddr={{ {{ hostvars[groups['nfsserver'][0]]['ansible_host'] }} }}
-SlurmctldHost={{ {{ groups['nfsserver'][0] }} }}
+SlurmctldAddr={{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}
+SlurmctldHost={{ groups['nfsserver'][0] }}
 
 #DisableRootJobs=NO
 #EnforcePartLimits=NO
@@ -163,6 +163,6 @@ SlurmdLogFile=/var/log/slurm/slurmd.log
 #
 #
 # COMPUTE NODES
-NodeName=m-slurm-dev-00[1-3] Procs=2 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=3500 State=UNKNOWN
+NodeName=clusterhpc-nodes[1-3] Procs=2 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=3500 State=UNKNOWN
 
 PartitionName=debug Nodes=ALL Default=YES MaxTime=INFINITE State=UP
