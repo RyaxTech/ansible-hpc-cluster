@@ -193,10 +193,18 @@
 
   # Scp munge key, only if the file is not present
   # TODO check if munge stuff works, not tested because it was manually done
-  - name: Munge key
-    ansible.builtin.shell:
-      cmd: "scp ubuntu@{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/tmp/munge.key /tmp"
-      creates: /tmp/munge.key
+  #- name: Munge key
+  #  ansible.builtin.shell:
+  #    cmd: "scp ubuntu@{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/tmp/munge.key /tmp/munge.key"
+  #    creates: /tmp/munge.key
+
+  - name:  Fetching a file from remote server
+    fetch:
+      src: "{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}/tmp/munge.key"
+      dest: /tmp/munge.key
+      flat: yes
+      validate_checksum: false
+
 
   - name: Fix owner of /etc/munge/munge.key
     ansible.builtin.file:
