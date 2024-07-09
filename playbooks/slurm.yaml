@@ -14,11 +14,6 @@
       name: mariadb
       state: started
       enabled: yes
-  - name: Create database user with name 'slurm' with all database privileges
-    community.mysql.mysql_user:
-      name: slurm
-      priv: '.:ALL'
-      state: present
 
 # ON ALL NODES
 - name: Preparation for slurm installation
@@ -284,11 +279,11 @@
       owner: root
       group: root
 
-  - name: Ensure slurmdbd service is running
-    service:
-      name: slurmdbd
-      state: restarted
-      enabled: yes
+#  - name: Ensure slurmdbd service is running
+#    service:
+#      name: slurmdbd
+#      state: restarted
+#      enabled: yes
 
   - name: Ensure slurmctld service is running
     service:

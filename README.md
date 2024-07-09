@@ -16,6 +16,7 @@ before starting.
 * change the IPs and hostnames in `inventory/hosts.yaml` to reflect your cluster
 * change the slurm node names hardware characteristics in `playbooks/templates/slurm.conf.j2` to reflect your cluster
 * you may change the slurm version in playbook/slurm.yaml
+* Slurmdbd is configured but not started automatically
 * Follow detailed instructions below regarding the playbooks you need to install
 
 ## Install NFS
