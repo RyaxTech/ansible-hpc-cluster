@@ -11,13 +11,14 @@ before starting.
 
 ## Configuration
 
-* create private key pairs for the user to launch the playbooks (the user needs to have sudo rights)
+* The configuration expects to have Ubuntu OS and ubuntu user created
+* create private key pairs for the user ubuntu to launch the playbooks (the user needs to have sudo rights)
 * insert your public keys into `playbooks/template/authorized_keys`
 * change the IPs and hostnames in `inventory/hosts.yaml` to reflect your cluster
 * change the slurm node names hardware characteristics in `playbooks/templates/slurm.conf.j2` to reflect your cluster
 * you may change the slurm version in playbook/slurm.yaml
 * Slurmdbd is configured but not started automatically
-* Follow detailed instructions below regarding the playbooks you need to install
+* Follow detailed instructions below regarding the playbooks you need to install. The first 3 playbooks are mandatory for slurm to function correctly. The last 2 playbooks are optional.
 
 ## Install NFS
 

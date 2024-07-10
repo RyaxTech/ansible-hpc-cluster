@@ -31,6 +31,19 @@
       owner: root
       group: root
 
+  - name: Copy "/etc/munge/munge.key" to /home/ubuntu
+    ansible.builtin.copy:
+      src: "/etc/munge/munge.key"
+      dest: /home/ubuntu
+      remote_src: yes
+      owner: root
+      group: root
+
+  - name: Ensure munged is running
+    service:
+      name: munge
+      state: restarted
+      enabled: yes
 
 # ON ALL NODES
 - name: Preparation for slurm installation
@@ -191,20 +204,13 @@
   become: yes
   tasks:
 
-  # Scp munge key, only if the file is not present
-  # TODO check if munge stuff works, not tested because it was manually done
-  #- name: Munge key
-  #  ansible.builtin.shell:
-  #    cmd: "scp ubuntu@{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}:/tmp/munge.key /tmp/munge.key"
-  #    creates: /tmp/munge.key
-
-  - name:  Fetching a file from remote server
-    fetch:
-      src: "{{ hostvars[groups['nfsserver'][0]]['ansible_host'] }}/tmp/munge.key"
-      dest: /tmp/munge.key
-      flat: yes
-      validate_checksum: false
-
+  - name: Copy "/home/ubuntu/munge.key" to /etc/munge/
+    ansible.builtin.copy:
+      src: "/home/ubuntu/munge.key"
+      dest: /etc/munge/
+      remote_src: yes
+      owner: munge
+      group: munge
 
   - name: Fix owner of /etc/munge/munge.key
     ansible.builtin.file:
@@ -213,6 +219,12 @@
       owner: munge
       group: munge
       mode: 0600
+
+  - name: Ensure munged is running
+    service:
+      name: munge
+      state: restarted
+      enabled: yes
 
   - name: Ensure slurmd is running
     service:
@@ -302,9 +314,5 @@
       name: slurmctld
       state: restarted
       enabled: yes
-
-  # Need to implemente a foreach node in ansible, not yet know how to do it
-  - name: Change node states to idle
-    ansible.builtin.shell: scontrol update  NodeName=`hostname` state=Idle
 
 
