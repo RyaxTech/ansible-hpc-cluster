@@ -43,6 +43,27 @@ ansible-playbook --extra-vars "username=ryax userid=1044" ./playbooks/add-user.y
 ansible-playbook ./playbooks/slurm.yaml
 ```
 
+## Finalize slurmdbd configuration
+
+Add the slurm user in the DB and grant all permissions on the slurm DB using the following commands.
+
+```sh
+sudo mysql
+MariaDB [(none)]>create user 'slurm'@'localhost';
+MariaDB [(none)]>grant all on slurm_acct_db.* TO 'slurm'@'localhost';
+```
+
+Uncomment the following lines in your slurm.conf file. Copy the slurm.conf file on all compute nodes. 
+
+```sh
+AccountingStorageHost=localhost
+AccountingStoragePort=6819
+AccountingStorageType=accounting_storage/slurmdbd
+```
+
+Copy the slurm.conf file on all compute nodes. Restart the slurmd on all nodes. Start slurmdbd and restart slurmctld.
+
+
 # Install singularity
 
 ```sh
